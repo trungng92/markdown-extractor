@@ -52,7 +52,7 @@ def get_repos project_id
     rest_endpoint = "/rest/api/1.0/projects/#{PROJECT_ID}/repos"
 
     http = Net::HTTP.new(BASE_GIT_URL, BASE_GIT_PORT)
-    repos_request = Net::HTTP::Get.new("/rest/api/1.0/projects/#{PROJECT_ID}/repos")
+    repos_request = Net::HTTP::Get.new("/rest/api/1.0/projects/#{PROJECT_ID}/repos?limit=1000")
     repos_request.basic_auth GIT_USER, GIT_PASSWORD
     repos_response = http.request(repos_request)
     repos_response.value
@@ -69,20 +69,26 @@ end
 # Clone the repos if they don't already exist
 def clone_repos repos
     $logger.info "Detecting if clones repos #{repos}"
-
+    failed_repos = []
     repos.each do |repo|
         repo_path = "#{GIT_DIR}/#{repo}"
         # TODO: Use ssh instead of http
         clone_url = "http://#{GIT_USER}:#{GIT_PASSWORD}@#{BASE_GIT_URL}:#{BASE_GIT_PORT}/scm/#{PROJECT_ID}/#{repo}.git"
         unless `git --git-dir='#{repo_path}/.git' --work-tree='#{repo_path}' config --get remote.origin.url`.to_s.strip == clone_url
-            $logger.info "Detected invalid git repo #{repo_path}. Deleting and recloning project #{repo}"
+            $logger.info "No git repo found or invalid git repo detected at #{repo_path}. Deleting and recloning project #{repo}"
             # If for some reason we didn't detect that it's a git repo, just clear the whole directory
             # And reclone (note that we only need to clone the latest commit on the master branch)
-            FileUtils.rm_rf repo_path
             successfully_cloned = system "git clone #{clone_url} --branch master --single-branch --depth 1 #{repo_path}"
-            $logger.warn "Could not git clone repo #{clone_url} to #{repo_path}" unless successfully_cloned
+            unless successfully_cloned
+                $logger.warn "Could not git clone repo #{clone_url} to #{repo_path}"
+                failed_repos.push repo
+                FileUtils.rm_rf repo_path
+            end
         end
     end
+    $logger.info "Removing failed repos #{failed_repos}"
+    repos -= failed_repos
+    return repos
 end
 
 # Take the first file with the string readme and use that as the readme
@@ -173,9 +179,9 @@ end
 
 def main
     repos = get_repos PROJECT_ID
-    clone_repos repos
+    successful_repos = clone_repos repos
     all_file_paths = Set.new
-    repos.each do |repo|
+    successful_repos.each do |repo|
         repo_path = "#{GIT_DIR}/#{repo}"
         FileUtils.chdir repo_path do
             readme_path = find_readme repo_path
