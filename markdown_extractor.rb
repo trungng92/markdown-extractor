@@ -85,6 +85,8 @@ def clone_repos repos
                 FileUtils.rm_rf repo_path
             end
         end
+        # Make sure the git repos are unmodified before we do anything
+        `git --git-dir='#{repo_path}/.git' --work-tree='#{repo_path}' reset --hard HEAD`
     end
     $logger.info "Removing failed repos #{failed_repos}"
     repos -= failed_repos
