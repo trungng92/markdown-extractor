@@ -91,6 +91,7 @@ def generate_summary_file
 end
 
 def main
+    FileUtils.mkdir_p OUTPUT_DIR
     file_names = ARGV
     copy_preserved_files file_names
     generate_top_readme_file
