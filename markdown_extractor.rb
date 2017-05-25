@@ -116,7 +116,7 @@ def parse_markdown_file file_uri, parsed_uris=Set.new
         # Continue on even if we can't parse a file
         # because the markdown file could have put in broken links
         # Or if a uri has a # tag in it
-        $logger.warn("Could not read markdown file '#{file_uri}': #{e}")
+        $logger.warn("Could not read markdown file '#{file_uri}' => #{e}")
         return false, []
     end
     # A set of uris which are actually references to a real local file
@@ -124,7 +124,7 @@ def parse_markdown_file file_uri, parsed_uris=Set.new
     relative_uris = find_relative_uris markdown_tree
     $logger.debug("Detected relative uris in '#{file_uri}': '#{relative_uris}'")
     relative_uris.each do |uri|
-        $logger.debug("File '#{uri}' in parsed files #{parsed_uris.inspect}: #{parsed_uris.include? uri}")
+        $logger.debug("File '#{uri}' in previously parsed files #{parsed_uris.inspect}: #{parsed_uris.include? uri}")
         unless parsed_uris.include? uri
             $logger.debug("Detected new file in '#{file_uri}' to parse: '#{uri}'")
             is_valid_markdown, new_valid_uris = parse_markdown_file uri, parsed_uris
@@ -141,7 +141,7 @@ def parse_markdown_file file_uri, parsed_uris=Set.new
             end
         end
     end
-    $logger.debug("Valid uris connected to '#{file_uri}': '#{valid_uris.inspect}'")
+    $logger.debug "Valid uris connected to '#{file_uri}': '#{valid_uris.inspect}'"
     return true, valid_uris
 end
 
