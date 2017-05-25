@@ -20,17 +20,15 @@ require 'logger'
 require 'set'
 
 # Location to clone the repos to (if they don't exist)
-# GIT_DIR = ENV['GIT_DIR']
-GIT_DIR = '/tmp/udocs/git'
+GIT_DIR = ENV['GIT_DIR']
 
 # Base directory where all the files will be copied to
 # Note that file structure will be preserved when copied
-# OUTPUT_DIR = ENV['OUTPUT_DIR']
-OUTPUT_DIR = '/tmp/docs'
+OUTPUT_DIR = ENV['OUTPUT_DIR']
 
 # Project under which repos are located
 # For github, this will be the user
-PROJECT_ID = 'ps'
+PROJECT_ID = ENV['PROJECT_ID']
 
 $logger = Logger.new(STDERR)
 $logger.level = Logger::DEBUG
