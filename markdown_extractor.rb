@@ -228,6 +228,8 @@ end
 # END ME BEING BAD
 
 def main
+    # Don't do anything if we haven't defined project id
+    return 0 if PROJECT_ID == nil
     repos = get_repos PROJECT_ID
     successful_repos = clone_repos repos
     all_file_paths = Set.new

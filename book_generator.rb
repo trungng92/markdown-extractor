@@ -91,6 +91,8 @@ def generate_summary_file
 end
 
 def main
+    # Don't do anything if we haven't defined project id
+    return 0 if PROJECT_ID == nil
     FileUtils.mkdir_p OUTPUT_DIR
     file_names = ARGV
     copy_preserved_files file_names
