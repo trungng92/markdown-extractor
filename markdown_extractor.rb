@@ -18,8 +18,6 @@
 # ./markdown_extractor.rb
 #
 
-# TODO: Add a second parser that can generate the gitbook style of markdown SUMMARY.md
-
 require 'fileutils'
 require 'json'
 require 'kramdown'
@@ -116,7 +114,7 @@ def parse_markdown_file file_uri, parsed_uris=Set.new
         # Continue on even if we can't parse a file
         # because the markdown file could have put in broken links
         # Or if a uri has a # tag in it
-        $logger.warn("Could not read markdown file '#{file_uri}' => #{e}")
+        $logger.warn "Could not read markdown file '#{file_uri}' in '#{FileUtils.pwd}' => #{e}"
         return false, []
     end
     # A set of uris which are actually references to a real local file
@@ -164,10 +162,6 @@ def find_relative_uris markdown_tree
     return uris
 end
 
-def is_uri_relative uri
-    $logger.debug "URI '#{uri}' is relative? #{(uri =~ /\A#{URI::regexp}+\z/) == nil}"
-    return (uri =~ /\A#{URI::regexp}+\z/) == nil
-end
 
 # Private method specific to kramdown to recursively search through the tree
 # and grab all urls and images
@@ -185,50 +179,8 @@ def _find_links_in_markdown_tree markdown_tree_node
 end
 
 
-# I"M BAD
-
-# CALL THIS FROM INSIDE MAIN FOR REPOS LOOP
-def find_replace_through_md_files files, repo
-    files.each do |file|
-        # puts "TRYING TO READ '#{file}' from '#{FileUtils.pwd}'"
-        begin
-            markdown_text = File.read(file)
-            markdown_tree = Kramdown::Document.new(markdown_text)
-            _add_repo_to_rel_links_in_markdown_tree markdown_tree.root, repo
-            File.write(file, markdown_tree.to_kramdown)
-        rescue Exception => e
-            $logger.info "Exception happened in '#{file}' in #{FileUtils.pwd} => #{e}"
-        end
-    end
-end
-
-# Private method specific to kramdown to recursively search through the tree
-# and grab all urls and images
-def _add_repo_to_rel_links_in_markdown_tree markdown_tree_node, repo
-    $logger.info "ITERATING THROUGH NODE #{markdown_tree_node.inspect}"
-    found_link = false
-    case markdown_tree_node.type
-    when :a
-        attr_name = 'href'
-        found_link = true
-    when :img
-        attr_name = 'src'
-        found_link = true
-    end
-    if found_link
-        $logger.info "Found link to check '#{markdown_tree_node.attr[attr_name]}' in #{markdown_tree_node.inspect}"
-        if is_uri_relative(markdown_tree_node.attr[attr_name])
-            $logger.info "Attempting to prepend repo '#{repo}' to link '#{markdown_tree_node.attr[attr_name]}'"
-            markdown_tree_node.attr[attr_name].prepend "#{repo}/"
-        end
-    end
-    markdown_tree_node.children.each { |child| _add_repo_to_rel_links_in_markdown_tree child, repo }
-end
-
-# END ME BEING BAD
-
 def main
-    # Don't do anything if we haven't defined project id
+    $logger.info "Looking for project '#{PROJECT_ID}'"
     return 0 if PROJECT_ID == nil
     repos = get_repos PROJECT_ID
     successful_repos = clone_repos repos
@@ -241,20 +193,14 @@ def main
         FileUtils.chdir repo_path do
             $logger.info "Processing '#{repo_path}'"
             readme_path = find_readme repo_path
-            all_file_paths.add "#{repo}/#{readme_path}"
-            is_valid_markdown, linked_markdown_file_paths = parse_markdown_file readme_path
-            all_file_paths.merge linked_markdown_file_paths.map { |path| "#{repo}/#{path}" }
+            unless  readme_path.empty?
+                all_file_paths.add "#{repo}/#{readme_path}"
+                is_valid_markdown, linked_markdown_file_paths = parse_markdown_file readme_path
+                all_file_paths.merge linked_markdown_file_paths.map { |path| "#{repo}/#{path}" }
 
-            files_per_repo[repo] = Set.new [readme_path]
-            files_per_repo[repo].merge linked_markdown_file_paths
-        end
-    end
-
-    $logger.info "Performing find and replace"
-    successful_repos.each do |repo|
-        repo_path = "#{GIT_DIR}/#{repo}"
-        FileUtils.chdir repo_path do
-            find_replace_through_md_files files_per_repo[repo], repo
+                files_per_repo[repo] = Set.new [readme_path]
+                files_per_repo[repo].merge linked_markdown_file_paths
+            end
         end
     end
     print all_file_paths.to_a.join ' '

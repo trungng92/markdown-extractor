@@ -24,6 +24,7 @@ GIT_DIR = ENV['GIT_DIR']
 
 # Base directory where all the files will be copied to
 # Note that file structure will be preserved when copied
+# Note that OUTPUT_DIR must be empty or this will throw an exception
 OUTPUT_DIR = ENV['OUTPUT_DIR']
 
 # Project under which repos are located
@@ -91,10 +92,9 @@ def generate_summary_file
 end
 
 def main
-    # Don't do anything if we haven't defined project id
     return 0 if PROJECT_ID == nil
     FileUtils.mkdir_p OUTPUT_DIR
-    file_names = ARGV
+    file_names = ARGV.to_a
     copy_preserved_files file_names
     generate_top_readme_file
     generate_summary_file
